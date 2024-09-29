@@ -1,1 +1,28 @@
-# Your Solution
+version: '3'
+services:
+
+  book_catalog:
+    image: $CONTAINER_REGISTRY.azurecr.io/book_catalog:$VERSION
+    build: 
+      context: ./book_catalog
+      dockerfile: Dockerfile
+    container_name: book_catalog_cnt
+    ports:
+     - "4000:4001"
+    environment:
+      - PORT=4001
+      - DATABASE_URL=postgresql://sit722_part5_gf8d_user:ATs755Lec85LjpQWogi67yLX38LS1iju@dpg-crsjf5rtq21c73dftu5g-a.oregon-postgres.render.com/sit722_part5_gf8d
+    restart: "no"
+
+  inventory_management:
+    image: $CONTAINER_REGISTRY.azurecr.io/inventory_management:$VERSION
+    build: 
+      context: ./inventory_management
+      dockerfile: Dockerfile
+    container_name: inventory_management_cnt
+    ports:
+     - "5000:5001"
+    environment:
+      - PORT=5001
+      - DATABASE_URL=postgresql://sit722_part5_gf8d_user:ATs755Lec85LjpQWogi67yLX38LS1iju@dpg-crsjf5rtq21c73dftu5g-a.oregon-postgres.render.com/sit722_part5_gf8d
+    restart: "no"

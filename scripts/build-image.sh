@@ -1,1 +1,4 @@
-# Your Solution
+
+set -e
+
+docker compose build

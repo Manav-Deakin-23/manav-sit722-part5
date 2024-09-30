@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: book-catalog-cnt
-        image: $CONTAINER_REGISTR.azurecr.io/book_catalog:$VERSION
+        image: $CONTAINER_REGISTRY.azurecr.io/book_catalog:$VERSION
         imagePullPolicy: IfNotPresent 
         env:
         - name: PORT

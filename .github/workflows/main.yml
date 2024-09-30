@@ -1,15 +1,24 @@
-name: Deploy Library Microservice to Kubernetes
+# 
+# GitHub Actions workflow.
+#
+# Automatically deploys the Node.js microservice to Kubernetes on push to any branch. 
+# For real use you might want to restrict this to the "prod" branch.
+#
+
+name: Deploy microservice
 
 on:
+  #
+  # Deploys the microservice on push to the main branch of this code repository.
+  #
   push: 
     branches:
       - main
 
+  #
+  # Allows deployment to be invoked manually through the GitHub Actions user interface.
+  #
   workflow_dispatch: 
-
-permissions:
-  id-token: write
-  contents: read
 
 jobs:
 
@@ -18,31 +27,39 @@ jobs:
     
     env:
       VERSION: ${{ github.sha }}
+      CONTAINER_REGISTRY: ${{ secrets.CONTAINER_REGISTRY }}
+      REGISTRY_UN: ${{ secrets.REGISTRY_UN }}
+      REGISTRY_PW: ${{ secrets.REGISTRY_PW  }}
 
     steps:
-      - name: Checkout repository code
-        uses: actions/checkout@v3
-
-      - name: Authenticate with Azure
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} 
-          
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.6
-
-      - name: Initialize Terraform
-        working-directory: ./scripts/terraform
-        run: terraform init
-
-      - name: Terraform plan - Show execution plan
-        working-directory: ./scripts/terraform
-        run: terraform plan
-
-      - name: Terraform apply - Deploy resources
-        working-directory: ./scripts/terraform
-        run: terraform apply -auto-approve
-
       
+      # Checks-out your repository under $GITHUB_WORKSPACE.
+      - uses: actions/checkout@v3
+
+      #
+      # Builds the Docker image.
+      #
+      - name: Build
+        run: ./scripts/build-image.sh
+
+      #
+      # Publishes the Docker image to the container registry.
+      #
+      - name: Publish
+        run: ./scripts/push-image.sh
+
+      #
+      # Installs Kubectl and connects it to the cluster.
+      #
+      # https://github.com/marketplace/actions/kubernetes-cli-kubectl
+      #
+      - uses: tale/kubectl-action@v1
+        with:
+          base64-kube-config: ${{ secrets.KUBE_CONFIG }}
+          kubectl-version: v1.24.2
+      
+      #
+      # Expands the configuration template and deploys the microservice.
+      #
+      - name: Deploy
+        run: ./scripts/deploy.sh

@@ -1,81 +1,73 @@
-name: 'Create Infrastructure and Deploy Microservice'
+# 
+# GitHub Actions workflow.
+#
+# Automatically deploys the Node.js microservice to Kubernetes on push to any branch. 
+# For real use you might want to restrict this to the "prod" branch.
+#
+
+name: Deploy microservice
 
 on:
-  # Deploys and creates infrastructure on push to the main branch of this code repository.
-  push:
+  #
+  # Deploys the microservice on push to the main branch of this code repository.
+  #
+  push: 
     branches:
       - main
 
-  # Allows both processes to be invoked manually through the GitHub Actions user interface.
-  workflow_dispatch:
+  #
+  # Allows deployment to be invoked manually through the GitHub Actions user interface.
+  #
+  workflow_dispatch: 
 
 jobs:
-  terraform_and_deploy:
-    name: 'Terraform Apply and Deploy'
+
+  deploy:
     runs-on: ubuntu-latest
     
     env:
       VERSION: ${{ github.sha }}
       CONTAINER_REGISTRY: ${{ secrets.CONTAINER_REGISTRY }}
       REGISTRY_UN: ${{ secrets.REGISTRY_UN }}
-      REGISTRY_PW: ${{ secrets.REGISTRY_PW }}
+      REGISTRY_PW: ${{ secrets.REGISTRY_PW  }}
 
     steps:
-      # Step 1: Check out the repository.
-      - name: 'Checkout Code'
-        uses: actions/checkout@v3
-
-      # Step 2: Set up Terraform.
-      - name: 'Setup Terraform'
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.6
-
-      # Step 3: Log in to Azure using Service Principal.
-      - name: 'Azure Login'
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # Step 4: Initialize Terraform.
-      - name: 'Initialize Terraform'
-        working-directory: ./scripts/terraform
-        run: terraform init
-
-      # Step 5: Terraform Plan (optional step to check what will be created).
-      - name: 'Terraform Plan'
-        working-directory: ./scripts/terraform
-        run: terraform plan
-
-      # Step 6: Terraform Apply to create infrastructure.
-      - name: 'Terraform Apply'
-        working-directory: ./scripts/terraform
-        run: terraform apply -auto-approve
-
-      # Step 7: Make shell scripts executable for Docker and Kubernetes tasks.
-      - name: Make build-image.sh executable
-        run: chmod +x ./scripts/build-image.sh
-
-      - name: Make push-image.sh executable
-        run: chmod +x ./scripts/push-image.sh
-
-      - name: Make deploy.sh executable
+      
+      # Checks-out your repository under $GITHUB_WORKSPACE.
+      - uses: actions/checkout@v3
+      
+      # Make scripts executable      
+      - name: Make build-image.sh executable        
+        run: chmod +x ./scripts/build-image.sh      
+      - name: Make push-image.sh executable       
+        run: chmod +x ./scripts/push-image.sh    
+      - name: Make deploy.sh executable     
         run: chmod +x ./scripts/deploy.sh
 
-      # Step 8: Build Docker image for the microservice.
-      - name: Build Docker Image
+      #
+      # Builds the Docker image.
+      #
+      - name: Build
         run: ./scripts/build-image.sh
 
-      # Step 9: Push the Docker image to the container registry.
-      - name: Push Docker Image
+      #
+      # Publishes the Docker image to the container registry.
+      #
+      - name: Publish
         run: ./scripts/push-image.sh
 
-      # Step 10: Install kubectl and connect to the Kubernetes cluster.
+      #
+      # Installs Kubectl and connects it to the cluster.
+      #
+      # https://github.com/marketplace/actions/kubernetes-cli-kubectl
+      #
       - uses: tale/kubectl-action@v1
         with:
           base64-kube-config: ${{ secrets.KUBE_CONFIG }}
           kubectl-version: v1.24.2
-
-      # Step 11: Deploy the microservice to the Kubernetes cluster.
-      - name: Deploy to Kubernetes
+      
+      #
+      # Expands the configuration template and deploys the microservice.
+      #
+      - name: Deploy
         run: ./scripts/deploy.sh
